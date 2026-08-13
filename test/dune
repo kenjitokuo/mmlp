@@ -1,0 +1,7 @@
+(test
+ (name test_mmlp)
+ (libraries mmlp))
+
+(test
+ (name test_mmlp_comprehensive)
+ (libraries mmlp))

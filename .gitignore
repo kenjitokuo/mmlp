@@ -1,0 +1,13 @@
+_build/
+*.install
+*.merlin
+.merlin
+*.coverage
+*.coverage.*
+*.prof
+*.prof.*
+*.bak
+*.tmp
+*~
+.DS_Store
+Thumbs.db

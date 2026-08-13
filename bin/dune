@@ -1,0 +1,4 @@
+(executable
+ (public_name mmlp)
+ (name main)
+ (libraries mmlp))
