@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use MMLP, please cite the software using the metadata below."
+authors:
+  - family-names: "Tokuo"
+    given-names: "Kenji"
+title: "MMLP"
+version: 0.1.0
+date-released: 2026-08-13
+url: "https://github.com/kenjitokuo/mmlp"
