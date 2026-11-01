@@ -151,7 +151,7 @@ Sets the proof-search depth bound.
 
 A larger value allows deeper proofs to be explored, at the cost of additional search.
 
-Every derivation found within the bound is reported, so the same answer may be printed several times. The number of derivations grows quickly with the bound, in particular for programs with quantifiers, so start with a small value and increase it as needed.
+Answers are searched by iterative deepening up to the bound. An answer is printed only if it is not an instance of an answer printed before it, so an answer is not repeated up to renaming of its output variables. A more general answer found later is still printed. The search space grows quickly with the bound, in particular for programs with quantifiers, so start with a small value and increase it as needed.
 
 ### `--max-modal-index N`
 

@@ -738,6 +738,150 @@ let () =
             ~answers:["X"] ~depth:7 "(forall Z. q(Z,X)) -> p(X)")
      <> [])
 
+(* ------------------------------------------------------------------ *)
+(* Reported answers: output instances and the reporting test.          *)
+
+let () =
+  let v x = Syntax.Var x and c x = Syntax.Const x in
+  let f t = Syntax.Fun ("f", [t]) in
+  let instance ?(rigid = []) ?(vars = ["X"]) general specific =
+    Answer_report.output_instance
+      ~rigid:(S.of_list rigid) ~answer_variables:vars ~general ~specific
+  in
+  check "renamed answer is an output instance"
+    (instance ["X", f (v "Y0")] ["X", f (v "Y1")]);
+  check "renaming is symmetric"
+    (instance ["X", f (v "Y1")] ["X", f (v "Y0")]);
+  check "instantiated answer is an output instance"
+    (instance ["X", f (v "Y0")] ["X", f (c "c")]);
+  check "more general answer is not an output instance"
+    (not (instance ["X", f (c "c")] ["X", f (v "Y0")]));
+  check "rigid query variable is not instantiated"
+    (not (instance ~rigid:["Z"] ["X", v "Z"] ["X", c "c"]));
+  check "rigid query variable matches itself"
+    (instance ~rigid:["Z"] ["X", f (v "Z")] ["X", f (v "Z")]);
+  check "fresh variable may become a rigid query variable"
+    (instance ~rigid:["Z"] ["X", v "Y0"] ["X", v "Z"]);
+  check "shared output variable is instantiated consistently"
+    (instance ~vars:["X"; "Y"] ["X", v "Y0"; "Y", v "Y0"]
+       ["X", c "c"; "Y", c "c"]);
+  check "shared output variable cannot take two values"
+    (not (instance ~vars:["X"; "Y"] ["X", v "Y0"; "Y", v "Y0"]
+            ["X", c "c"; "Y", c "d"]));
+  check "independent variables may be identified"
+    (instance ~vars:["X"; "Y"] ["X", v "Y0"; "Y", v "Y1"]
+       ["X", v "Y0"; "Y", v "Y0"]);
+  check "identity on an unbound answer variable"
+    (instance [] ["X", c "c"]);
+  check "empty answer set gives the identity answer"
+    (instance ~vars:[] [] []);
+  let reported =
+    Answer_report.report ~rigid:S.empty ~answer_variables:["X"]
+      ~answer_of:(fun a -> a)
+      [ ["X", f (c "c")];
+        ["X", f (c "c")];
+        ["X", f (v "Y0")];
+        ["X", f (v "Y3")];
+        ["X", f (c "d")];
+        ["X", c "e"] ]
+  in
+  check "reporting test keeps first answers and later general ones"
+    (reported = [["X", f (c "c")]; ["X", f (v "Y0")]; ["X", c "e"]])
+
+(* End to end: every computed answer within a bound is an output instance
+   of a reported answer, reported answers are computed answers, and no
+   reported answer is an output instance of an earlier reported one. *)
+let () =
+  let reported_run ~focused spec_value =
+    let parse s =
+      get_ok (Parser.parse_formula ~max_modal_index:spec_value.max_index s)
+    in
+    let query = parse spec_value.query in
+    let program = List.map parse spec_value.program in
+    let signature =
+      get_ok
+        (List.fold_left
+           (fun r f -> bind_result r (fun s -> add_formula_signature s f))
+           (Ok Signature.empty) (query :: program))
+    in
+    let environment =
+      get_ok
+        (Environment.create ~max_modal_index:spec_value.max_index ~signature
+           ~axioms:(Modal_axiom.Set.of_list spec_value.axioms))
+    in
+    let reported =
+      get_ok
+        ((if focused then Execution.focused_reported_answers_within_depth
+          else Execution.reported_answers_within_depth)
+           ~environment ~program ~query
+           ~answer_variables:spec_value.answers ~depth:spec_value.depth)
+    in
+    ( Answer_report.rigid_variables ~query
+        ~answer_variables:spec_value.answers,
+      List.map (fun t -> t.Trusted_answer.answer) reported )
+  in
+  let cases =
+    [ "duplicate yes", spec ~program:["p(X)"] ~depth:4 "p(c)", Some 1;
+      "modal T", spec ~program:["box[1] p"] ~axioms:[Modal_axiom.T (modality ~max_index:1 1)]
+        ~depth:4 "p", Some 1;
+      "alias", spec ~program:["forall z. p(z,z)"] ~answers:["X"; "Y"] ~depth:3
+        "p(X,Y)", Some 1;
+      "universal", spec ~program:["forall y. p(f(y))"] ~answers:["X"] ~depth:3
+        "p(X)", Some 1;
+      "three answers",
+        spec ~program:["p(c)"; "p(d)"; "forall y. p(f(y))"] ~answers:["X"]
+          ~depth:3 "p(X)", Some 3;
+      "rigid query variable",
+        spec ~program:["forall y. p(y,y)"] ~answers:["X"] ~depth:3 "p(X,Z)",
+        Some 1;
+      "no answer", spec ~program:["exists y. p(y)"] ~answers:["X"] ~depth:3
+        "p(X)", Some 0;
+      "quantified program",
+        spec ~program:["forall x. (p(x) -> q(x))"; "p(c)"] ~depth:4 "q(c)",
+        Some 1 ]
+  in
+  List.iter
+    (fun (name, spec_value, expected) ->
+      List.iter
+        (fun focused ->
+          let name =
+            name ^ if focused then " (focused)" else " (unfocused)"
+          in
+          let rigid, reported = reported_run ~focused spec_value in
+          let all = run ~focused spec_value in
+          let instance general specific =
+            Answer_report.output_instance ~rigid
+              ~answer_variables:spec_value.answers ~general ~specific
+          in
+          (match expected with
+           | Some n ->
+               check ("number of reported answers: " ^ name)
+                 (List.length reported = n)
+           | None -> ());
+          check ("reported answers are computed answers: " ^ name)
+            (List.for_all (fun a -> List.mem a all) reported);
+          check ("every computed answer is covered: " ^ name)
+            (List.for_all
+               (fun a -> List.exists (fun r -> instance r a) reported)
+               all);
+          let rec no_earlier_cover earlier = function
+            | [] -> true
+            | a :: rest ->
+                not (List.exists (fun e -> instance e a) earlier)
+                && no_earlier_cover (earlier @ [a]) rest
+          in
+          check ("no reported answer is covered by an earlier one: " ^ name)
+            (no_earlier_cover [] reported))
+        [true; false])
+    cases;
+  (* The rigid query variable stays in the answer. *)
+  let _, reported =
+    reported_run ~focused:true
+      (spec ~program:["forall y. p(y,y)"] ~answers:["X"] ~depth:3 "p(X,Z)")
+  in
+  check "answer with a rigid query variable"
+    (reported = [["X", Syntax.Var "Z"]])
+
 let () =
   if !failures > 0 then begin
     Printf.eprintf "%d specification check(s) failed\n" !failures;

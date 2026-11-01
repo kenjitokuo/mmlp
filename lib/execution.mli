@@ -55,3 +55,23 @@ val instantiate_answer :
   trusted:Trusted_answer.t ->
   substitution:Answer_instance.output_substitution ->
   ((string * Syntax.term) list, string) result
+
+val reported_answers_within_depth :
+  environment:Environment.t ->
+  program:Syntax.formula list ->
+  query:Syntax.formula ->
+  answer_variables:string list ->
+  depth:int ->
+  (Trusted_answer.t list, string) result
+(** Reported answers of the reference enumeration whose stages have
+    height bound at most [depth], in the order of reporting. *)
+
+val focused_reported_answers_within_depth :
+  environment:Environment.t ->
+  program:Syntax.formula list ->
+  query:Syntax.formula ->
+  answer_variables:string list ->
+  depth:int ->
+  (Trusted_answer.t list, string) result
+(** Reported answers of the focused reference enumeration whose stages
+    have height bound at most [depth], in the order of reporting. *)

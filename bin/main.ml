@@ -299,7 +299,7 @@ let () =
   in
 
   match
-    Execution.focused_answers_within_depth
+    Execution.focused_reported_answers_within_depth
       ~environment
       ~program
       ~query
