@@ -1,7 +1,14 @@
 (test
  (name test_mmlp)
+ (modules test_mmlp)
  (libraries mmlp))
 
 (test
  (name test_mmlp_comprehensive)
+ (modules test_mmlp_comprehensive)
+ (libraries mmlp))
+
+(test
+ (name test_mmlp_spec)
+ (modules test_mmlp_spec)
  (libraries mmlp))

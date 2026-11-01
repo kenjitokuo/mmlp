@@ -132,6 +132,17 @@ dune exec mmlp -- \
 
 uses modal principle T for modality 1.
 
+The indices follow the schemes below, where `box[i]` and `diamond[i]` are written `[i]` and `<i>`:
+
+```text
+D:i       [i]A -> <i>A
+T:i       [i]A -> A
+I:i,j     [i]A -> [j]A
+B:i,j     A -> [i]<j>A
+4:i,j,k   [i]A -> [j][k]A
+5:i,j,k   <i>A -> [j]<k>A
+```
+
 Several modal principles may be combined by repeating `--axiom`.
 
 ### `--depth N`
@@ -139,6 +150,8 @@ Several modal principles may be combined by repeating `--axiom`.
 Sets the proof-search depth bound.
 
 A larger value allows deeper proofs to be explored, at the cost of additional search.
+
+Every derivation found within the bound is reported, so the same answer may be printed several times. The number of derivations grows quickly with the bound, in particular for programs with quantifiers, so start with a small value and increase it as needed.
 
 ### `--max-modal-index N`
 
@@ -213,7 +226,7 @@ dune exec mmlp -- \
   --program "forall x. (p(x) -> q(x))" \
   --program "p(c)" \
   --query "q(c)" \
-  --depth 8
+  --depth 3
 ```
 
 ### Modal reasoning with T
@@ -232,10 +245,12 @@ dune exec mmlp -- \
 dune exec mmlp -- \
   --program "box[2] p" \
   --query "box[1] p" \
-  --axiom "I:1,2" \
+  --axiom "I:2,1" \
   --max-modal-index 2 \
-  --depth 6
+  --depth 3
 ```
+
+Here `I:2,1` is the inclusion principle `box[2] A -> box[1] A`.
 
 ## Repository layout
 
