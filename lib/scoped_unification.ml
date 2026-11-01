@@ -109,34 +109,26 @@ let solve ~supply equations =
           accumulator
           (List.combine left_arguments right_arguments @ rest)
 
-    | (left, Symbolic_term.Flex flexible) :: rest ->
-        begin
-          match left with
-          | Symbolic_term.Flex _ ->
-              solve_flexible
-                supply
-                current
-                accumulator
-                flexible
-                left
-                rest
-          | _ ->
-              solve_flexible
-                supply
-                current
-                accumulator
-                flexible
-                left
-                rest
-        end
-
     | (Symbolic_term.Flex flexible, term) :: rest ->
+        (* Selected equation X = t with X flexible.  When t is also a
+           flexible variable, X (the left side) is the variable handled
+           by the failure tests, Permission restriction and Bind. *)
         solve_flexible
           supply
           current
           accumulator
           flexible
           term
+          rest
+
+    | (left, Symbolic_term.Flex flexible) :: rest ->
+        (* Orient: t = X becomes X = t; here t is not flexible. *)
+        solve_flexible
+          supply
+          current
+          accumulator
+          flexible
+          left
           rest
 
     | _ ->
